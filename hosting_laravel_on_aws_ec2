@@ -1,0 +1,155 @@
+// I have used EC2 Amazon Linux 2023 Server
+// I will use Apache Server NOT Nginx
+// In Nginx many resources says to create virtual host, but in Apache there's not need
+
+// NOTE: Don't change dir path if not said: 
+// Default path --  /home/ec2-user
+// how to get to default path:  cd /home/ec2-user
+
+// Step 1 (updatation)
+sudo yum update
+
+// Step 2 (install packages)
+sudo yum install -y httpd php php-mysqlnd php-gd php-xml php-mbstring php-json php-zip git
+
+// paste full code below
+curl -sS https://getcomposer.org/installer | php
+
+sudo mv composer.phar /urs/local/bin/composer
+sudo ln -s /usr/local/bin/composer /usr/bin/composer
+
+// Step 3
+  
+// For demo I had uploaded my test_laravel.zip file to G-drive and made it public Access : NOT RECOMMENDED
+// You should upload it on github (private repo)
+
+// If you already have your laravel_project on GITHUB SKIP THIS  STEP, Here I will use following command to download it from G-drive
+sudo yum install python
+sudo yum install pip 
+pip install gdown
+gdown "drive_public_link" --fuzzy
+
+// Why download using gdown?
+// you can use curl and wget but if its larger file it does not get download completely
+
+// Step 4
+// If you have laravel project on github use,
+// curl or wget to clone it 
+
+// NOTE: still you are in dir: /home/ec2-user
+// check your dir using command: pwd
+
+// After downloading
+// Step 5 (if its zip file unzip it) else goto step 7
+unzip __file.zip
+
+// Step 6 (delete .zip if not needed)
+rm __file.zip
+  
+// Step 7 (move that **UNZIP** laravel foler to this path)
+sudo mv __file /var/www/html
+
+// Step 8 (config httpd)
+sudo systemctl start httpd
+sudo systemctl enable httpd
+sudo systemctl restart httpd
+
+// By now on public ec2 ip you will see 'it works' on your browser
+// But you want that your laravel (index.php) should be starting point, so you need to config
+
+
+// Before that understand this basic:
+// suppose your folder name is test_laravel (present in /var/www/html)
+
+// that means /var/www/html/test_laravel and (inside which you have /pubilc foldre)
+// you'll need to config it to make it starting point of your web server
+
+// So that is: /var/www/html/test_laravel/public
+// This will become your starting point of website
+
+// In short just remember your folder name and replace that with 'test_laravel'
+// eg. /var/www/html/your_folder_name/public
+
+// Step 9 (MOST CRICITAL STEP)
+cd /etc/httpd/conf
+
+// in this folder you will find httpd.conf
+// if you dont find all files just use command: ls -a  
+
+// edit that file
+sudo nano httpd.conf
+
+
+// ----------------- READ THIS COMPLETELY  ------------------
+  
+// inside where you will find: ** DocumentRoot **
+// eg. DocumentRoot /var/www/html/
+// something like this, but you need to tell that your (starting point) is not present here 
+// its present in /var/www/html/your_folder_name/public
+// eg. in my case its: /var/www/html/test_laravel/public
+// change this line
+
+// DocummentRoot /var/www/html => DocumentRoot /var/www/html/your_folder_name/public
+  
+// You need to give permission now, just add these lines below (NOTE :dont delete any other lines)
+
+<Directory /var/www/html/test_laravel/public>
+    AllowOverride All
+    Require all granted
+</Directory>
+
+// after adding this to httpd.conf press ctrl+O to write and press enter, now finally write ctrl+X to (save+exit)
+
+
+// Step 10 (Restart server)
+sudo systemctl restart httpd
+
+
+// Still you need to grant access to your folder (just paste these lines)
+
+// NOTE: dont forget to replace test_laravel with your folder name
+sudo chown -R $(whoami):$(whoami) /var/www/html/test_laravel/bootstrap/cache
+  
+sudo chmod -R 775 /var/www/html/test_laravel/bootstrap/cache
+
+sudo chown -R apache:apache /var/www/html/test_laravel/storage
+
+sudo chmod -R 775 /var/www/html/test_laravel/storage
+
+
+// Try restart server
+sudo systemctl restart httpd
+
+// Move to your folder dir
+// NOTE: replace test_laravel with your folder name
+cd /var/www/html/test_laravel
+
+// now, here if you write command: ls
+// you will find artisan there
+  
+// Paste this line
+sudo chmod +x artisan
+
+// Again try restart server
+sudo systemctl restart httpd
+
+// Again paste this lines
+php artisan config:cache
+php artisan migrate
+
+// Finally restarting your server will work...
+sudo systemctl restart httpd
+
+// NOTE: you will still have to change your database configurations first
+// just change it
+// 1. goto: cd /var/www/html/test_laravel
+// 2. sudo nano .env 
+// 3. edit this as db requirements (I had used RDS here) -- remember to save: i. write ctrl+O, ii. press enter, iii. ctrl+X
+// 4. goto: cd /var/www/html/test_laravel/config
+// 5. edit this same as db requirements
+// restart the server
+
+sudo systemctl restart httpd
+
+// Congragulations.......
+// If you want help feel free to contact.
